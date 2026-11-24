@@ -5,6 +5,7 @@ import {
   Bookmark,
   Check,
   Clock,
+  Download,
   ExternalLink,
   Share2,
   X,
@@ -68,11 +69,18 @@ export function ArticleDialog({
 
   async function handleShareOrCopy() {
     if (!article) return;
-    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    const siteLink =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const shareText = `${article.title} (${article.sourceName}) — via Frontier Brief`;
+
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function"
+    ) {
       try {
         await navigator.share({
           title: article.title,
-          text: `${article.title} — ${article.sourceName}`,
+          text: shareText,
           url: article.url,
         });
         return;
@@ -81,7 +89,9 @@ export function ArticleDialog({
       }
     }
     try {
-      await navigator.clipboard.writeText(article.url);
+      await navigator.clipboard.writeText(
+        `${shareText}\n${article.url}\n\nDaily AI & Deep-Tech Briefing: ${siteLink}`
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -90,6 +100,33 @@ export function ArticleDialog({
   }
 
   const domain = article ? DOMAIN_MAP[article.domain] : null;
+  const siteOrigin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const ogCardUrl = article
+    ? `/api/og?title=${encodeURIComponent(article.title)}&domain=${encodeURIComponent(
+        article.domain
+      )}&source=${encodeURIComponent(article.sourceName)}&tag=${encodeURIComponent(
+        article.tags[0] || ""
+      )}`
+    : "";
+
+  const xIntentUrl = article
+    ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        `${article.title}\n\nvia @FrontierBrief (${article.sourceName}) #AI #MachineLearning`
+      )}&url=${encodeURIComponent(article.url)}`
+    : "#";
+
+  const linkedInUrl = article
+    ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+        article.url
+      )}`
+    : "#";
+
+  const whatsAppUrl = article
+    ? `https://wa.me/?text=${encodeURIComponent(
+        `*${article.title}*\n${article.sourceName}\n${article.url}\n\nMore AI & Quantum news: ${siteOrigin}`
+      )}`
+    : "#";
 
   return (
     <dialog
@@ -143,9 +180,14 @@ export function ArticleDialog({
             >
               <span>{formatFullDate(article.publishedAt)}</span>
               <span>·</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <Clock size={13} />
-                ~{article.readingTimeMin} min read
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <Clock size={13} />~{article.readingTimeMin} min read
               </span>
               {article.author && (
                 <>
@@ -159,12 +201,48 @@ export function ArticleDialog({
 
             <p className="dialog-summary">{article.summary}</p>
 
-            <div className="card-tags" style={{ marginBottom: "22px" }}>
+            <div className="card-tags" style={{ marginBottom: "18px" }}>
               {article.tags.map((tag) => (
                 <span key={tag} className="mini-tag">
                   {tag}
                 </span>
               ))}
+            </div>
+
+            {/* Viral Social Distribution Row */}
+            <div className="social-share-row" aria-label="Share to social platforms">
+              <a
+                href={xIntentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-pill"
+              >
+                Post to X
+              </a>
+              <a
+                href={linkedInUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-pill"
+              >
+                LinkedIn
+              </a>
+              <a
+                href={whatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-pill"
+              >
+                WhatsApp
+              </a>
+              <a
+                href={ogCardUrl}
+                download={`frontier-brief-${article.id}.png`}
+                className="social-pill"
+              >
+                <Download size={13} />
+                Share Card PNG
+              </a>
             </div>
 
             <div className="dialog-footer">
@@ -179,7 +257,7 @@ export function ArticleDialog({
                     size={15}
                     fill={isSaved ? "currentColor" : "none"}
                   />
-                  {isSaved ? "Saved" : "Save for later"}
+                  {isSaved ? "Saved" : "Save"}
                 </button>
                 <button
                   type="button"

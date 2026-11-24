@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
+import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -31,9 +32,34 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Frontier Brief — Worldwide AI Research & Deep-Tech Intelligence",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "Frontier Brief — Worldwide AI Research & Deep-Tech Intelligence",
+    template: "%s",
+  },
   description:
     "Curated real-time worldwide news for AI/ML researchers: frontier papers, major AI labs, quantum computing, semiconductors, energy, biotech, robotics, policy, and entrepreneurship.",
+  keywords: [
+    "AI research news",
+    "machine learning papers",
+    "quantum computing news",
+    "OpenAI DeepMind NVIDIA news",
+    "AI startups entrepreneurship",
+    "semiconductor energy AI news",
+  ],
+  openGraph: {
+    type: "website",
+    siteName: "Frontier Brief",
+    title: "Frontier Brief — Worldwide AI Research & Deep-Tech Intelligence",
+    description:
+      "Real-time worldwide briefing for AI/ML researchers across frontier papers, major labs, quantum physics, chips & energy, and entrepreneurship.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Frontier Brief — Worldwide AI Research & Deep-Tech Intelligence",
+    description:
+      "Real-time worldwide briefing for AI/ML researchers across frontier papers, major labs, quantum physics, chips & energy, and entrepreneurship.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

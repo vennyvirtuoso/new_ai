@@ -4,12 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Bookmark,
+  Check,
+  Copy,
   ExternalLink,
+  Flame,
+  Headphones,
+  Layers,
   LayoutGrid,
   List,
   Radio,
   RefreshCw,
   Search,
+  Share2,
   SlidersHorizontal,
   Sparkles,
   X,
@@ -20,20 +26,51 @@ import type { DomainId, NewsArticle, NewsPayload } from "@/lib/types";
 import { ThemeToggle } from "./ThemeToggle";
 import { ArticleDialog } from "./ArticleDialog";
 import { SourcesDialog } from "./SourcesDialog";
+import { AudioBriefPlayer } from "./AudioBriefPlayer";
+import { StackDialog } from "./StackDialog";
 
-type ActiveTab = "all" | DomainId | "saved";
+type ActiveTab = "all" | DomainId | "saved" | "shared";
 type TimeRange = "24h" | "7d" | "30d" | "all";
 type ViewMode = "editorial" | "wire";
 
 const SAVED_STORAGE_KEY = "frontier-brief:saved-articles";
+const STACK_STORAGE_KEY = "frontier-brief:my-stack";
+const ENGAGEMENT_STORAGE_KEY = "frontier-brief:engagement";
+const ALL_DOMAIN_IDS = DOMAINS.map((d) => d.id);
+
+interface EngagementState {
+  streakDays: number;
+  lastVisitDate: string; // YYYY-MM-DD
+  lastVisitTs: number;
+}
 
 interface NewsDashboardProps {
   initialData: NewsPayload;
+  initialDomain?: DomainId;
 }
 
-export function NewsDashboard({ initialData }: NewsDashboardProps) {
+function getTodayKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function getYesterdayKey(): string {
+  const d = new Date(Date.now() - 86400 * 1000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function NewsDashboard({
+  initialData,
+  initialDomain,
+}: NewsDashboardProps) {
   const [data, setData] = useState<NewsPayload>(initialData);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("all");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialDomain ?? "all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
@@ -42,26 +79,83 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [sharedIds, setSharedIds] = useState<string[]>([]);
+  const [myStack, setMyStack] = useState<DomainId[]>(ALL_DOMAIN_IDS);
+  const [streakDays, setStreakDays] = useState<number>(1);
+  const [previousVisitTs, setPreviousVisitTs] = useState<number | null>(null);
+  const [onlyNewSinceVisit, setOnlyNewSinceVisit] = useState(false);
+
   const [activeArticle, setActiveArticle] = useState<NewsArticle | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [stackOpen, setStackOpen] = useState(false);
+  const [audioOpen, setAudioOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [digestCopied, setDigestCopied] = useState(false);
+  const [listSharedFeedback, setListSharedFeedback] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const activeFiltersCount =
-    (selectedTag ? 1 : 0) +
-    (selectedSource ? 1 : 0) +
-    (timeRange !== "all" ? 1 : 0) +
-    (viewMode !== "editorial" ? 1 : 0);
-
+  // Hydrate saved bookmarks, personalized My Stack, reading streak, and ?list= shared reading lists
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(SAVED_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
+      const rawSaved = localStorage.getItem(SAVED_STORAGE_KEY);
+      if (rawSaved) {
+        const parsed = JSON.parse(rawSaved);
         if (Array.isArray(parsed)) setSavedIds(parsed);
       }
+
+      const rawStack = localStorage.getItem(STACK_STORAGE_KEY);
+      if (rawStack) {
+        const parsed = JSON.parse(rawStack);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter((id): id is DomainId => id in DOMAIN_MAP);
+          if (valid.length > 0) setMyStack(valid);
+        }
+      }
+
+      // Daily reading streak & "New since last visit" tracking
+      const today = getTodayKey();
+      const yesterday = getYesterdayKey();
+      const nowTs = Date.now();
+      const rawEngagement = localStorage.getItem(ENGAGEMENT_STORAGE_KEY);
+      let nextStreak = 1;
+      if (rawEngagement) {
+        const prev = JSON.parse(rawEngagement) as EngagementState;
+        if (prev.lastVisitTs) {
+          setPreviousVisitTs(prev.lastVisitTs);
+        }
+        if (prev.lastVisitDate === today) {
+          nextStreak = Math.max(1, prev.streakDays || 1);
+        } else if (prev.lastVisitDate === yesterday) {
+          nextStreak = (prev.streakDays || 1) + 1;
+        } else {
+          nextStreak = 1;
+        }
+      }
+      setStreakDays(nextStreak);
+      const updated: EngagementState = {
+        streakDays: nextStreak,
+        lastVisitDate: today,
+        lastVisitTs: nowTs,
+      };
+      localStorage.setItem(ENGAGEMENT_STORAGE_KEY, JSON.stringify(updated));
     } catch {
-      // Ignore storage read errors
+      // Ignore storage errors
+    }
+
+    // Check for shareable reading list query (?list=id1,id2,...)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const listParam = params.get("list");
+      if (listParam) {
+        const ids = listParam
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (ids.length > 0) {
+          setSharedIds(ids);
+          setActiveTab("shared");
+        }
+      }
     }
   }, []);
 
@@ -73,10 +167,33 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
       try {
         localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(next));
       } catch {
-        // Ignore storage write errors
+        // Ignore storage errors
       }
       return next;
     });
+  }
+
+  function handleToggleStackDomain(id: DomainId) {
+    setMyStack((prev) => {
+      const exists = prev.includes(id);
+      if (exists && prev.length === 1) return prev; // Keep at least 1 domain
+      const next = exists ? prev.filter((d) => d !== id) : [...prev, id];
+      try {
+        localStorage.setItem(STACK_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  }
+
+  function handleResetStack() {
+    setMyStack(ALL_DOMAIN_IDS);
+    try {
+      localStorage.removeItem(STACK_STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
   }
 
   async function handleRefresh() {
@@ -94,15 +211,45 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
   }
 
   const savedSet = useMemo(() => new Set(savedIds), [savedIds]);
+  const sharedSet = useMemo(() => new Set(sharedIds), [sharedIds]);
+  const stackSet = useMemo(() => new Set(myStack), [myStack]);
+  const isStackCustomized = myStack.length < DOMAINS.length;
 
-  // Compute available tags from current tab's articles
+  const newSinceVisitCount = useMemo(() => {
+    if (!previousVisitTs) return 0;
+    return data.articles.filter((a) => Date.parse(a.publishedAt) > previousVisitTs)
+      .length;
+  }, [data.articles, previousVisitTs]);
+
+  const activeFiltersCount =
+    (selectedTag ? 1 : 0) +
+    (selectedSource ? 1 : 0) +
+    (timeRange !== "all" ? 1 : 0) +
+    (viewMode !== "editorial" ? 1 : 0) +
+    (onlyNewSinceVisit ? 1 : 0);
+
+  // Articles belonging to active tab
   const tabArticles = useMemo(() => {
-    if (activeTab === "all") return data.articles;
+    if (activeTab === "shared") {
+      return data.articles.filter((a) => sharedSet.has(a.id));
+    }
     if (activeTab === "saved") {
       return data.articles.filter((a) => savedSet.has(a.id));
     }
+    if (activeTab === "all") {
+      return isStackCustomized
+        ? data.articles.filter((a) => stackSet.has(a.domain))
+        : data.articles;
+    }
     return data.articles.filter((a) => a.domain === activeTab);
-  }, [data.articles, activeTab, savedSet]);
+  }, [
+    data.articles,
+    activeTab,
+    savedSet,
+    sharedSet,
+    stackSet,
+    isStackCustomized,
+  ]);
 
   const availableTags = useMemo(() => {
     const counts = new Map<string, number>();
@@ -118,7 +265,9 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
   }, [tabArticles]);
 
   const availableSources = useMemo(() => {
-    if (activeTab === "all" || activeTab === "saved") return [];
+    if (activeTab === "all" || activeTab === "saved" || activeTab === "shared") {
+      return [];
+    }
     const map = new Map<string, string>();
     for (const art of tabArticles) {
       map.set(art.sourceId, art.sourceName);
@@ -126,7 +275,7 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
     return Array.from(map.entries());
   }, [tabArticles, activeTab]);
 
-  // Apply search, tag, source, and time range filters
+  // Apply search, tag, source, new-since-visit, and time range filters
   const filteredArticles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const now = Date.now();
@@ -142,6 +291,9 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
     return tabArticles.filter((art) => {
       if (selectedTag && !art.tags.includes(selectedTag)) return false;
       if (selectedSource && art.sourceId !== selectedSource) return false;
+      if (onlyNewSinceVisit && previousVisitTs) {
+        if (Date.parse(art.publishedAt) <= previousVisitTs) return false;
+      }
       if (maxAgeMs !== Infinity) {
         const age = now - Date.parse(art.publishedAt);
         if (age > maxAgeMs) return false;
@@ -153,7 +305,30 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
       }
       return true;
     });
-  }, [tabArticles, selectedTag, selectedSource, timeRange, searchQuery]);
+  }, [
+    tabArticles,
+    selectedTag,
+    selectedSource,
+    timeRange,
+    searchQuery,
+    onlyNewSinceVisit,
+    previousVisitTs,
+  ]);
+
+  // Top 6 cross-domain stories for both the Morning Audio Brief and Daily Digest export
+  const topBriefingStories = useMemo(() => {
+    const preferredDomains = isStackCustomized ? myStack : ALL_DOMAIN_IDS;
+    const picks: NewsArticle[] = [];
+    for (const domainId of preferredDomains) {
+      const top = data.articles.find((a) => a.domain === domainId);
+      if (top) picks.push(top);
+    }
+    for (const art of data.articles) {
+      if (picks.length >= 6) break;
+      if (!picks.some((p) => p.id === art.id)) picks.push(art);
+    }
+    return picks.slice(0, 6);
+  }, [data.articles, myStack, isStackCustomized]);
 
   // Pick diverse Lead Briefing stories on the Front Page
   const leadBriefing = useMemo(() => {
@@ -162,7 +337,8 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
       viewMode !== "editorial" ||
       searchQuery.trim() !== "" ||
       selectedTag !== null ||
-      timeRange !== "all"
+      timeRange !== "all" ||
+      onlyNewSinceVisit
     ) {
       return null;
     }
@@ -188,8 +364,74 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
     searchQuery,
     selectedTag,
     timeRange,
+    onlyNewSinceVisit,
     filteredArticles,
   ]);
+
+  async function handleCopyDailyDigest() {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const lines = [
+      `Frontier Brief — ${formatMastheadDate()}`,
+      `Top Worldwide AI, Quantum & Deep-Tech Stories:`,
+      "",
+      ...topBriefingStories.map((art, i) => {
+        const label = DOMAIN_MAP[art.domain]?.shortLabel ?? "Tech";
+        return `${i + 1}. [${label}] ${art.title} (${art.sourceName})\n   ${art.url}`;
+      }),
+      "",
+      `Read the full live briefing (28 feeds): ${origin}`,
+    ];
+    const digestText = lines.join("\n");
+
+    try {
+      await navigator.clipboard.writeText(digestText);
+      setDigestCopied(true);
+      setTimeout(() => setDigestCopied(false), 2200);
+    } catch {
+      // Fallback for restricted clipboard contexts
+    }
+  }
+
+  async function handleShareReadingList() {
+    if (savedIds.length === 0 || typeof window === "undefined") return;
+    const shareUrl = `${window.location.origin}/?list=${encodeURIComponent(
+      savedIds.slice(0, 20).join(",")
+    )}`;
+    const shareText = `My Frontier Brief AI & Deep-Tech Reading List (${savedIds.length} stories)`;
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Frontier Brief — Curated Reading List",
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setListSharedFeedback(true);
+      setTimeout(() => setListSharedFeedback(false), 2200);
+    } catch {
+      // Ignore
+    }
+  }
+
+  function handleSaveAllShared() {
+    setSavedIds((prev) => {
+      const merged = Array.from(new Set([...sharedIds, ...prev]));
+      try {
+        localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(merged));
+      } catch {
+        // Ignore
+      }
+      return merged;
+    });
+  }
 
   const liveSourcesCount = data.sourceHealth.filter((s) => s.ok).length;
   const isFrontPageOrganized =
@@ -197,12 +439,19 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
     viewMode === "editorial" &&
     searchQuery.trim() === "" &&
     selectedTag === null &&
-    timeRange === "all";
+    timeRange === "all" &&
+    !onlyNewSinceVisit;
+
+  const visibleFrontDomains = useMemo(
+    () => DOMAINS.filter((d) => stackSet.has(d.id)),
+    [stackSet]
+  );
 
   function handleSelectTab(tab: ActiveTab) {
     setActiveTab(tab);
     setSelectedTag(null);
     setSelectedSource(null);
+    setOnlyNewSinceVisit(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -282,7 +531,7 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
               onClick={() => handleSelectTab("all")}
             >
               <Sparkles size={14} />
-              <span>Front Page</span>
+              <span>{isStackCustomized ? "My Stack" : "Front Page"}</span>
               <span className="tab-count">{data.totalArticles}</span>
             </button>
 
@@ -307,6 +556,73 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
           </div>
         </div>
       </nav>
+
+      {/* Researcher Pulse & Growth Utility Strip */}
+      <section className="container">
+        <div className="pulse-strip" aria-label="Daily briefing tools">
+          <div className="pulse-metrics">
+            <span className="pulse-pill streak-pill" title="Daily reading streak">
+              <Flame size={13} />
+              <span>{streakDays}-day streak</span>
+            </span>
+
+            {newSinceVisitCount > 0 && (
+              <button
+                type="button"
+                className="pulse-pill"
+                data-active={onlyNewSinceVisit}
+                onClick={() => setOnlyNewSinceVisit((v) => !v)}
+              >
+                <span>+{newSinceVisitCount} new since last visit</span>
+              </button>
+            )}
+          </div>
+
+          <div className="pulse-actions">
+            <button
+              type="button"
+              className="pulse-pill"
+              data-active={audioOpen}
+              onClick={() => setAudioOpen((v) => !v)}
+            >
+              <Headphones size={13} />
+              <span>Listen (3m)</span>
+            </button>
+
+            <button
+              type="button"
+              className="pulse-pill"
+              data-active={digestCopied}
+              onClick={handleCopyDailyDigest}
+            >
+              {digestCopied ? <Check size={13} /> : <Copy size={13} />}
+              <span>{digestCopied ? "Digest copied!" : "Copy Digest"}</span>
+            </button>
+
+            <button
+              type="button"
+              className="pulse-pill"
+              data-active={isStackCustomized}
+              onClick={() => setStackOpen(true)}
+            >
+              <Layers size={13} />
+              <span>
+                {isStackCustomized
+                  ? `My Stack (${myStack.length}/6)`
+                  : "My Stack"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {audioOpen && (
+          <AudioBriefPlayer
+            stories={topBriefingStories}
+            onClose={() => setAudioOpen(false)}
+            onSelectArticle={(article) => setActiveArticle(article)}
+          />
+        )}
+      </section>
 
       {/* Filter & Search Toolbar */}
       <section className="container">
@@ -427,7 +743,8 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
           {/* Source Filter (shown inside a specific domain) */}
           {availableSources.length > 1 && (
             <div
-              className="tag-strip"
+              className="tag-strip mobile-collapsible"
+              data-open={mobileFiltersOpen}
               role="group"
               aria-label="Filter by source"
             >
@@ -459,36 +776,68 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
 
       {/* Main Reading Canvas */}
       <main className="container main-content">
-        {/* Domain intro header when viewing a single domain */}
-        {activeTab !== "all" && activeTab !== "saved" && (
+        {/* Shared Reading List Header */}
+        {activeTab === "shared" && (
           <div className="section-header" style={{ marginBottom: "24px" }}>
             <div>
-              <div className="section-title-row">
-                <span
-                  className="section-bar"
-                  style={{
-                    backgroundColor: DOMAIN_MAP[activeTab].accentColor,
-                  }}
-                />
-                <h2 className="section-title">
-                  {DOMAIN_MAP[activeTab].label}
-                </h2>
-              </div>
+              <h2 className="section-title">Shared Reading List</h2>
               <p className="section-desc">
-                {DOMAIN_MAP[activeTab].description}
+                Someone shared {filteredArticles.length} curated stories from
+                Frontier Brief with you.
               </p>
             </div>
-            <span
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                fontSize: "12px",
-                color: "var(--text-muted)",
-              }}
-            >
-              {filteredArticles.length} stories
-            </span>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={handleSaveAllShared}
+              >
+                <Bookmark size={14} />
+                Save all to my list
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => handleSelectTab("all")}
+              >
+                Back to Front Page
+              </button>
+            </div>
           </div>
         )}
+
+        {/* Domain intro header when viewing a single domain */}
+        {activeTab !== "all" &&
+          activeTab !== "saved" &&
+          activeTab !== "shared" && (
+            <div className="section-header" style={{ marginBottom: "24px" }}>
+              <div>
+                <div className="section-title-row">
+                  <span
+                    className="section-bar"
+                    style={{
+                      backgroundColor: DOMAIN_MAP[activeTab].accentColor,
+                    }}
+                  />
+                  <h2 className="section-title">
+                    {DOMAIN_MAP[activeTab].label}
+                  </h2>
+                </div>
+                <p className="section-desc">
+                  {DOMAIN_MAP[activeTab].description}
+                </p>
+              </div>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono), monospace",
+                  fontSize: "12px",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {filteredArticles.length} stories
+              </span>
+            </div>
+          )}
 
         {activeTab === "saved" && (
           <div className="section-header" style={{ marginBottom: "24px" }}>
@@ -498,6 +847,23 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
                 Articles you bookmarked in this browser for deep reading.
               </p>
             </div>
+            {savedIds.length > 0 && (
+              <button
+                type="button"
+                className="icon-btn"
+                data-active={listSharedFeedback}
+                onClick={handleShareReadingList}
+              >
+                {listSharedFeedback ? (
+                  <Check size={14} />
+                ) : (
+                  <Share2 size={14} />
+                )}
+                {listSharedFeedback
+                  ? "Share link copied!"
+                  : "Share Reading List"}
+              </button>
+            )}
           </div>
         )}
 
@@ -507,7 +873,7 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
             <h3>No stories match your current filters</h3>
             <p>
               {activeTab === "saved"
-                ? "Click the bookmark icon on any article to build your personal research reading list."
+                ? "Click the bookmark icon on any article to build and share your personal research reading list."
                 : "Try clearing your search query, switching to All time, or resetting the topic tag."}
             </p>
             <button
@@ -518,7 +884,10 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
                 setSelectedTag(null);
                 setSelectedSource(null);
                 setTimeRange("all");
-                if (activeTab === "saved") setActiveTab("all");
+                setOnlyNewSinceVisit(false);
+                if (activeTab === "saved" || activeTab === "shared") {
+                  setActiveTab("all");
+                }
               }}
             >
               Reset filters
@@ -637,8 +1006,8 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
               </div>
             </section>
 
-            {/* Organized Domain-by-Domain Sections */}
-            {DOMAINS.map((domain) => {
+            {/* Organized Domain-by-Domain Sections (respecting My Stack) */}
+            {visibleFrontDomains.map((domain) => {
               const domainItems = data.articles
                 .filter((a) => a.domain === domain.id)
                 .slice(0, 4);
@@ -770,15 +1139,28 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
       </main>
 
       <footer className="site-footer">
-        <div className="container footer-inner">
-          <span>
-            Frontier Brief · Live RSS/Atom aggregator for AI/ML researchers ·
-            Ready for Vercel Edge
-          </span>
-          <span>
-            Last synced: {formatRelativeTime(data.fetchedAt)} · All headlines
-            link directly to original publishers
-          </span>
+        <div className="container">
+          <div className="footer-domains" aria-label="Direct domain links">
+            {DOMAINS.map((domain) => (
+              <a
+                key={domain.id}
+                href={`/domain/${domain.id}`}
+                className="footer-domain-link"
+              >
+                {domain.label}
+              </a>
+            ))}
+          </div>
+          <div className="footer-inner">
+            <span>
+              Frontier Brief · Live RSS/Atom aggregator for AI/ML researchers ·
+              Powered by Vercel Edge
+            </span>
+            <span>
+              Last synced: {formatRelativeTime(data.fetchedAt)} · All headlines
+              link directly to original publishers
+            </span>
+          </div>
         </div>
       </footer>
 
@@ -793,6 +1175,14 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
         open={sourcesOpen}
         sourceHealth={data.sourceHealth}
         onClose={() => setSourcesOpen(false)}
+      />
+
+      <StackDialog
+        open={stackOpen}
+        selectedDomains={myStack}
+        onToggleDomain={handleToggleStackDomain}
+        onReset={handleResetStack}
+        onClose={() => setStackOpen(false)}
       />
 
       {/* Native-style iPhone / Android Bottom Tab Bar */}
@@ -810,15 +1200,11 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
         <button
           type="button"
           className="mobile-tab-btn"
-          data-active={viewMode === "wire" && activeTab !== "saved"}
-          onClick={() => {
-            setViewMode((prev) => (prev === "wire" ? "editorial" : "wire"));
-            if (activeTab === "saved") setActiveTab("all");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
+          data-active={audioOpen}
+          onClick={() => setAudioOpen((v) => !v)}
         >
-          <List size={19} />
-          <span>{viewMode === "wire" ? "Editorial" : "Wire"}</span>
+          <Headphones size={19} />
+          <span>Listen</span>
         </button>
 
         <button
