@@ -37,11 +37,7 @@ export function ArticleDialog({
     const meta = document.querySelector<HTMLMetaElement>(
       'meta[name="color-scheme"]'
     );
-    if (meta?.content === "dark") return "dark";
-    if (meta?.content === "light") return "light";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return meta?.content === "dark" ? "dark" : "light";
   }
 
   useEffect(() => {
@@ -117,10 +113,18 @@ export function ArticleDialog({
   const siteOrigin =
     typeof window !== "undefined" ? window.location.origin : "";
   const ogCardUrl = article
-    ? `/api/og?title=${encodeURIComponent(article.title)}&domain=${encodeURIComponent(
+    ? `/api/og?title=${encodeURIComponent(article.title)}&summary=${encodeURIComponent(
+        article.summary
+      )}&domain=${encodeURIComponent(
         article.domain
       )}&source=${encodeURIComponent(article.sourceName)}&tag=${encodeURIComponent(
         article.tags[0] || ""
+      )}&date=${encodeURIComponent(
+        new Intl.DateTimeFormat("en", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }).format(new Date(article.publishedAt))
       )}`
     : "";
 

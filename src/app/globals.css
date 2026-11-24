@@ -1,7 +1,7 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
-  /* Universal light-mode defaults (works on all iOS Safari versions, including < 17.5) */
+  /* Default light editorial theme */
   --bg-page: #faf9f6;
   --bg-surface: #ffffff;
   --bg-elevated: #f4f2ec;
@@ -28,34 +28,7 @@
   --target-size: 24px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page: #0c0e13;
-    --bg-surface: #151821;
-    --bg-elevated: #1d222e;
-    --bg-hover: #252b3b;
-    --bg-pill: #202634;
-
-    --text-primary: #f5f4f0;
-    --text-secondary: #c4c9d4;
-    --text-muted: #8c95a6;
-
-    --border-subtle: #262c3a;
-    --border-strong: #3a4356;
-
-    --accent-ink: #7cb6ff;
-    --accent-soft: rgba(96, 165, 250, 0.14);
-    --ok-color: #34d399;
-    --warn-color: #fbbf24;
-
-    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
-      0 6px 20px rgba(0, 0, 0, 0.28);
-    --shadow-dialog: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
-      0 28px 72px rgba(0, 0, 0, 0.72);
-  }
-}
-
-/* Explicit theme override from <meta name="color-scheme"> (works on desktop & iOS Safari) */
+/* Explicit dark mode override from <meta name="color-scheme"> */
 :root:has(> head > meta[name="color-scheme"][content="dark"]) {
   color-scheme: dark;
   --bg-page: #0c0e13;
@@ -76,26 +49,6 @@
     0 6px 20px rgba(0, 0, 0, 0.28);
   --shadow-dialog: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 28px 72px rgba(0, 0, 0, 0.72);
-}
-
-:root:has(> head > meta[name="color-scheme"][content="light"]) {
-  color-scheme: light;
-  --bg-page: #faf9f6;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f4f2ec;
-  --bg-hover: #efede6;
-  --bg-pill: #f1efe9;
-  --text-primary: #141413;
-  --text-secondary: #4a4a45;
-  --text-muted: #73726c;
-  --border-subtle: #e6e2d8;
-  --border-strong: #cfc9bc;
-  --accent-ink: #1a4ed8;
-  --accent-soft: #eef3ff;
-  --ok-color: #059669;
-  --warn-color: #d97706;
-  --shadow-card: 0 1px 2px rgba(20, 20, 19, 0.04);
-  --shadow-dialog: 0 24px 64px rgba(15, 23, 42, 0.18);
 }
 
 @media (pointer: coarse) {
@@ -174,21 +127,12 @@ input {
   border: 0;
 }
 
-/* Theme toggle icon visibility follows color-scheme without relying on JS classes */
+/* Theme toggle icon visibility follows active theme (default light) */
 .theme-icon-sun {
   display: none;
 }
 .theme-icon-moon {
   display: inline-flex;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-icon-sun {
-    display: inline-flex;
-  }
-  :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-icon-moon {
-    display: none;
-  }
 }
 
 :root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-icon-sun {

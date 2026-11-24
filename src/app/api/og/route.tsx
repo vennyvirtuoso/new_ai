@@ -8,51 +8,85 @@ export async function GET(request: NextRequest) {
   const title = (
     searchParams.get("title") ||
     "Worldwide AI Research, Quantum & Deep-Tech Intelligence"
-  ).slice(0, 140);
+  ).slice(0, 155);
+  const rawSummary = (searchParams.get("summary") || "").trim();
+  const summary =
+    rawSummary.length > 165
+      ? `${rawSummary.slice(0, 162).replace(/\s+\S*$/, "")}...`
+      : rawSummary;
   const domainParam = searchParams.get("domain") as DomainId | null;
   const domainMeta =
     domainParam && DOMAIN_MAP[domainParam] ? DOMAIN_MAP[domainParam] : null;
   const source = (
     searchParams.get("source") || "28 Live Research & Tech Feeds"
-  ).slice(0, 50);
-  const tag = (searchParams.get("tag") || "").slice(0, 32);
-  const theme = searchParams.get("theme") === "light" ? "light" : "dark";
+  ).slice(0, 44);
+  const tag = (searchParams.get("tag") || "").slice(0, 28);
+  const dateLabel = (
+    searchParams.get("date") ||
+    new Intl.DateTimeFormat("en", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date())
+  ).slice(0, 24);
+  const theme = searchParams.get("theme") === "dark" ? "dark" : "light";
   const isLight = theme === "light";
-
-  const accent = domainMeta?.accentColor || (isLight ? "#1a4ed8" : "#60a5fa");
-  const badgeLabel = domainMeta?.label || "FRONT PAGE BRIEFING";
   const isDownload = searchParams.get("download") === "1";
 
-  const palette = isLight
+  const accent = domainMeta?.accentColor || (isLight ? "#1a4ed8" : "#60a5fa");
+  const badgeLabel = domainMeta?.label || "Front Page Briefing";
+
+  const headlineSize =
+    title.length > 110 ? 35 : title.length > 75 ? 41 : summary ? 46 : 54;
+
+  const p = isLight
     ? {
-        bg: "#faf9f6",
-        surface: "#ffffff",
-        pillBg: "#f1efe9",
-        pillBorder: "#dcd6c8",
-        pillText: "#1a4ed8",
-        eyebrowText: "#4a4a45",
+        outerBg: `linear-gradient(135deg, #f3f0e8 0%, #faf9f6 52%, ${accent}18 100%)`,
+        cardBg: "#ffffff",
+        cardBorder: "#e2ddd2",
+        cardShadow: "0 24px 60px rgba(20, 20, 19, 0.08)",
+        domainBg: `${accent}14`,
+        domainBorder: `${accent}38`,
+        domainText: accent,
+        tagBg: "#f4f2ec",
+        tagBorder: "#e2ddd2",
+        tagText: "#4a4a45",
+        dateText: "#73726c",
         titleText: "#141413",
+        summaryText: "#4a4a45",
+        divider: "#ebe7dd",
+        monogramBg: "#141413",
+        monogramText: "#faf9f6",
         brandText: "#141413",
-        subText: "#63625c",
-        divider: "#e2ddd2",
-        sourceBg: "#ffffff",
-        sourceBorder: "#dcd6c8",
-        sourceText: "#2c2c28",
+        subText: "#6f6e68",
+        sourceBg: "#f6f4ee",
+        sourceBorder: "#e2ddd2",
+        sourceLabel: "#73726c",
+        sourceValue: "#141413",
       }
     : {
-        bg: "#0e1015",
-        surface: "#161922",
-        pillBg: "#1e2330",
-        pillBorder: "#323a4d",
-        pillText: "#8cc0ff",
-        eyebrowText: "#c2c6d0",
-        titleText: "#f5f4f0",
+        outerBg: `linear-gradient(135deg, #090b10 0%, #0e1118 55%, ${accent}26 100%)`,
+        cardBg: "#141822",
+        cardBorder: "#283044",
+        cardShadow: "0 28px 70px rgba(0, 0, 0, 0.55)",
+        domainBg: `${accent}22`,
+        domainBorder: `${accent}55`,
+        domainText: "#e5edff",
+        tagBg: "#1d2332",
+        tagBorder: "#313b52",
+        tagText: "#c4c9d4",
+        dateText: "#8c95a6",
+        titleText: "#f6f5f0",
+        summaryText: "#b8c0cf",
+        divider: "#242b3c",
+        monogramBg: "#f5f4f0",
+        monogramText: "#0c0e13",
         brandText: "#f5f4f0",
-        subText: "#9ca3b5",
-        divider: "#282e3d",
-        sourceBg: "#161922",
-        sourceBorder: "#2f3647",
-        sourceText: "#e5e7eb",
+        subText: "#8c95a6",
+        sourceBg: "#1a202e",
+        sourceBorder: "#2d364b",
+        sourceLabel: "#8c95a6",
+        sourceValue: "#f3f4f6",
       };
 
   return new ImageResponse(
@@ -62,138 +96,218 @@ export async function GET(request: NextRequest) {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          background: palette.bg,
-          color: palette.titleText,
-          padding: "56px 64px",
+          padding: "36px",
+          background: p.outerBg,
           fontFamily: "Georgia, serif",
-          position: "relative",
         }}
       >
-        {/* Top accent bar */}
+        {/* Elevated Editorial Inner Card */}
         <div
           style={{
+            width: "100%",
+            height: "100%",
             display: "flex",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 10,
-            background: accent,
-          }}
-        />
-
-        {/* Eyebrow row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
+            flexDirection: "column",
             justifyContent: "space-between",
-            fontFamily: "sans-serif",
+            background: p.cardBg,
+            border: `1.5px solid ${p.cardBorder}`,
+            borderRadius: 24,
+            boxShadow: p.cardShadow,
+            padding: "42px 50px",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          {/* Sleek top accent ribbon */}
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 7,
+              background: accent,
+            }}
+          />
+
+          {/* Top Metadata Row */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 14,
+              justifyContent: "space-between",
+              fontFamily: "sans-serif",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                width: 14,
-                height: 14,
-                borderRadius: 999,
-                background: accent,
-              }}
-            />
-            <span
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: palette.eyebrowText,
-              }}
-            >
-              {badgeLabel}
-            </span>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "7px 16px",
+                  borderRadius: 999,
+                  background: p.domainBg,
+                  border: `1px solid ${p.domainBorder}`,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    width: 10,
+                    height: 10,
+                    borderRadius: 999,
+                    background: accent,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                    color: p.domainText,
+                  }}
+                >
+                  {badgeLabel}
+                </span>
+              </div>
 
-          {tag ? (
-            <div
-              style={{
-                display: "flex",
-                fontSize: 20,
-                padding: "8px 18px",
-                borderRadius: 999,
-                background: palette.pillBg,
-                border: `1px solid ${palette.pillBorder}`,
-                color: palette.pillText,
-              }}
-            >
-              {tag}
+              {tag ? (
+                <div
+                  style={{
+                    display: "flex",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    padding: "7px 15px",
+                    borderRadius: 999,
+                    background: p.tagBg,
+                    border: `1px solid ${p.tagBorder}`,
+                    color: p.tagText,
+                  }}
+                >
+                  {tag}
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
 
-        {/* Main Headline */}
-        <div
-          style={{
-            display: "flex",
-            fontSize: title.length > 85 ? 48 : 58,
-            fontWeight: 700,
-            lineHeight: 1.16,
-            letterSpacing: "-0.025em",
-            color: palette.titleText,
-            marginTop: 12,
-            marginBottom: 12,
-          }}
-        >
-          {title}
-        </div>
-
-        {/* Footer branding */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: `1px solid ${palette.divider}`,
-            paddingTop: 26,
-            fontFamily: "sans-serif",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span
+            <div
               style={{
-                fontSize: 30,
-                fontWeight: 700,
-                fontFamily: "Georgia, serif",
-                color: palette.brandText,
+                display: "flex",
+                fontSize: 16,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: p.dateText,
               }}
             >
-              Frontier Brief
-            </span>
-            <span style={{ fontSize: 19, color: palette.subText }}>
-              AI Research · Major Labs · Quantum · Chips &amp; Energy · Startups
-            </span>
+              {dateLabel}
+            </div>
           </div>
 
+          {/* Centerpiece Headline + Editorial Excerpt */}
           <div
             style={{
               display: "flex",
-              fontSize: 20,
-              color: palette.sourceText,
-              padding: "10px 18px",
-              borderRadius: 10,
-              background: palette.sourceBg,
-              border: `1px solid ${palette.sourceBorder}`,
+              flexDirection: "column",
+              gap: 18,
+              marginTop: 10,
+              marginBottom: 10,
             }}
           >
-            {`Source: ${source}`}
+            <div
+              style={{
+                display: "flex",
+                fontSize: headlineSize,
+                fontWeight: 700,
+                lineHeight: 1.18,
+                letterSpacing: "-0.025em",
+                color: p.titleText,
+              }}
+            >
+              {title}
+            </div>
+
+            {summary ? (
+              <div
+                style={{
+                  display: "flex",
+                  fontFamily: "sans-serif",
+                  fontSize: 21,
+                  lineHeight: 1.48,
+                  color: p.summaryText,
+                }}
+              >
+                {summary}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Bottom Masthead & Source Attribution */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderTop: `1px solid ${p.divider}`,
+              paddingTop: 22,
+              fontFamily: "sans-serif",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: p.monogramBg,
+                  color: p.monogramText,
+                  fontFamily: "Georgia, serif",
+                  fontSize: 23,
+                  fontWeight: 700,
+                  letterSpacing: "-0.04em",
+                }}
+              >
+                FB
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    fontFamily: "Georgia, serif",
+                    color: p.brandText,
+                  }}
+                >
+                  Frontier Brief
+                </span>
+                <span style={{ fontSize: 15, color: p.subText }}>
+                  AI Research · Major Labs · Quantum · Chips &amp; Startups
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                borderRadius: 12,
+                background: p.sourceBg,
+                border: `1px solid ${p.sourceBorder}`,
+                fontSize: 17,
+              }}
+            >
+              <span style={{ color: p.sourceLabel }}>Source</span>
+              <span style={{ fontWeight: 700, color: p.sourceValue }}>
+                {source}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -203,7 +317,8 @@ export async function GET(request: NextRequest) {
       height: 630,
       headers: isDownload
         ? {
-            "Content-Disposition": 'attachment; filename="frontier-brief-card.png"',
+            "Content-Disposition":
+              'attachment; filename="frontier-brief-card.png"',
           }
         : undefined,
     }

@@ -4,11 +4,19 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect } from "react";
 
 function applyScheme(value: string | null) {
+  const isDark = value === "dark";
   const meta = document.querySelector<HTMLMetaElement>(
     'meta[name="color-scheme"]'
   );
-  if (!meta) return;
-  meta.content = value === "light" || value === "dark" ? value : "light dark";
+  if (meta) {
+    meta.content = isDark ? "dark" : "light";
+  }
+  const themeColor = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"]'
+  );
+  if (themeColor) {
+    themeColor.content = isDark ? "#0c0e13" : "#faf9f6";
+  }
 }
 
 export function ThemeToggle() {
@@ -23,37 +31,23 @@ export function ThemeToggle() {
   }, []);
 
   function handleToggle() {
-    const systemPrefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-    const systemScheme = systemPrefersDark ? "dark" : "light";
+    const meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="color-scheme"]'
+    );
+    const currentlyDark = meta?.content === "dark";
+    const next = currentlyDark ? "light" : "dark";
 
-    let stored: string | null = null;
     try {
-      stored = localStorage.getItem("color-scheme");
-    } catch {
-      stored = null;
-    }
-
-    const rendered =
-      stored === "light" || stored === "dark" ? stored : systemScheme;
-    const target = rendered === "dark" ? "light" : "dark";
-
-    if (target === systemScheme) {
-      try {
+      if (next === "dark") {
+        localStorage.setItem("color-scheme", "dark");
+      } else {
         localStorage.removeItem("color-scheme");
-      } catch {
-        // Ignore storage errors; still apply to meta
       }
-      applyScheme(null);
-    } else {
-      try {
-        localStorage.setItem("color-scheme", target);
-      } catch {
-        // Ignore storage errors; still apply to meta
-      }
-      applyScheme(target);
+    } catch {
+      // Ignore storage errors
     }
+
+    applyScheme(next);
   }
 
   return (
@@ -61,7 +55,7 @@ export function ThemeToggle() {
       type="button"
       className="icon-btn"
       onClick={handleToggle}
-      title="Toggle light or dark color scheme"
+      title="Toggle light or dark theme"
     >
       <span className="theme-icon-sun" aria-hidden="true">
         <Sun size={15} />

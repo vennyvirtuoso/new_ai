@@ -25,10 +25,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c0e13" },
-  ],
+  themeColor: "#faf9f6",
 };
 
 export const metadata: Metadata = {
@@ -70,7 +67,7 @@ export const metadata: Metadata = {
   },
 };
 
-const FOUC_SCRIPT = `try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark"){document.querySelector('meta[name="color-scheme"]').content=s;}}catch(e){}`;
+const FOUC_SCRIPT = `try{if(localStorage.getItem("color-scheme")==="dark"){document.querySelector('meta[name="color-scheme"]').content="dark";}}catch(e){}`;
 
 export default function RootLayout({
   children,
@@ -84,7 +81,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <meta name="color-scheme" content="light dark" />
+        <meta name="color-scheme" content="light" />
         <script dangerouslySetInnerHTML={{ __html: FOUC_SCRIPT }} />
       </head>
       <body>{children}</body>
