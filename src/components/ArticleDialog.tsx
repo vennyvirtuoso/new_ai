@@ -29,6 +29,7 @@ export function ArticleDialog({
 }: ArticleDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState(false);
+  const [downloadingCard, setDownloadingCard] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -109,6 +110,51 @@ export function ArticleDialog({
         article.tags[0] || ""
       )}`
     : "";
+
+  async function handleDownloadCard() {
+    if (!article || !ogCardUrl || downloadingCard) return;
+    setDownloadingCard(true);
+    try {
+      const res = await fetch(`${ogCardUrl}&download=1`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const filename = `frontier-brief-${article.id}.png`;
+
+      // On iPhone/Android, offer native Share Sheet with the PNG file so users can Save Image directly
+      if (typeof File !== "undefined" && typeof navigator !== "undefined") {
+        const file = new File([blob], filename, { type: "image/png" });
+        if (
+          typeof navigator.canShare === "function" &&
+          navigator.canShare({ files: [file] })
+        ) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: article.title,
+            });
+            return;
+          } catch (err) {
+            if ((err as Error)?.name === "AbortError") return;
+          }
+        }
+      }
+
+      // Desktop & fallback: reliable Blob download
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    } catch {
+      // Fallback: open directly
+      window.open(`${ogCardUrl}&download=1`, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloadingCard(false);
+    }
+  }
 
   const xIntentUrl = article
     ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(
@@ -235,14 +281,15 @@ export function ArticleDialog({
               >
                 WhatsApp
               </a>
-              <a
-                href={ogCardUrl}
-                download={`frontier-brief-${article.id}.png`}
+              <button
+                type="button"
                 className="social-pill"
+                onClick={handleDownloadCard}
+                disabled={downloadingCard}
               >
                 <Download size={13} />
-                Share Card PNG
-              </a>
+                {downloadingCard ? "Saving PNG..." : "Share Card PNG"}
+              </button>
             </div>
 
             <div className="dialog-footer">

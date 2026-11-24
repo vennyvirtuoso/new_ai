@@ -22,27 +22,40 @@ interface AudioBriefPlayerProps {
 
 const SPEEDS = [1, 1.15, 1.3] as const;
 
-const NOVELTY_VOICES =
-  /\b(albert|bad news|bahh|bells|boing|bubbles|cellos|fred|good news|jester|junior|kathy|organ|ralph|superstar|trinoids|whisper|wobble|zarvox|eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley)\b/i;
+const UK_FEMALE_NAMES =
+  /\b(google uk english female|sonia|libby|maisie|serena|kate|martha|stephanie|shelley|fiona)\b/i;
 
-function scoreVoice(voice: SpeechSynthesisVoice): number {
-  const name = voice.name;
-  if (!voice.lang.toLowerCase().startsWith("en")) return -100;
-  if (NOVELTY_VOICES.test(name)) return -50;
+const MALE_NAMES =
+  /\b(male|daniel|arthur|oliver|george|ryan|thomas|alfie|elliot|gordon|malcolm|jamie)\b/i;
 
-  let score = 0;
-  // Highest tier: Microsoft Edge Online Natural, Apple Premium/Enhanced/Siri, Google Neural
-  if (/natural|neural|online/i.test(name)) score += 100;
-  if (/premium|enhanced/i.test(name)) score += 90;
-  if (/siri/i.test(name)) score += 85;
-  if (/google us english|google uk english/i.test(name)) score += 80;
-  if (/\b(ava|zoe|allison|samantha|daniel|serena|karen|moira|aria|jenny|guy|andrew|brian|emma)\b/i.test(name)) {
-    score += 40;
-  }
-  if (/compact/i.test(name)) score -= 25;
-  if (voice.lang === "en-US" || voice.lang === "en-GB") score += 10;
-  if (!voice.localService) score += 15; // Cloud neural voices generally sound smoother
-  return score;
+function pickUkEnglishFemaleVoice(allVoices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const scored = allVoices
+    .map((voice) => {
+      const name = voice.name;
+      const lang = voice.lang.toLowerCase();
+      let score = -100;
+
+      if (/google uk english female/i.test(name)) {
+        score = 1000;
+      } else if (lang.startsWith("en-gb") && UK_FEMALE_NAMES.test(name)) {
+        score = 800;
+        if (/natural|neural|online|premium|enhanced/i.test(name)) score += 100;
+      } else if (lang.startsWith("en-gb") && !MALE_NAMES.test(name)) {
+        score = 500;
+        if (/female/i.test(name)) score += 150;
+        if (/natural|neural|online|premium|enhanced/i.test(name)) score += 100;
+      } else if (lang.startsWith("en-gb")) {
+        score = 200;
+      } else if (UK_FEMALE_NAMES.test(name)) {
+        score = 150;
+      }
+
+      return { voice, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.voice ?? null;
 }
 
 function cleanForBroadcast(text: string): string {
@@ -89,8 +102,7 @@ export function AudioBriefPlayer({
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [speedIdx, setSpeedIdx] = useState(0);
   const [studioMode, setStudioMode] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>("");
+  const [ukVoice, setUkVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [supported, setSupported] = useState(true);
 
   const speed = SPEEDS[speedIdx];
@@ -137,13 +149,9 @@ export function AudioBriefPlayer({
 
     const loadVoices = () => {
       const all = window.speechSynthesis.getVoices();
-      const ranked = all
-        .filter((v) => v.lang.toLowerCase().startsWith("en") && !NOVELTY_VOICES.test(v.name))
-        .sort((a, b) => scoreVoice(b) - scoreVoice(a));
-
-      if (ranked.length > 0 && isMountedRef.current) {
-        setVoices(ranked.slice(0, 12));
-        setSelectedVoiceURI((prev) => prev || ranked[0].voiceURI);
+      const best = pickUkEnglishFemaleVoice(all);
+      if (best && isMountedRef.current) {
+        setUkVoice(best);
       }
     };
 
@@ -158,7 +166,7 @@ export function AudioBriefPlayer({
   }, [stopAllAudio]);
 
   const speakStory = useCallback(
-    async (storyIndex: number, playbackRate: number, voiceUriOverride?: string) => {
+    async (storyIndex: number, playbackRate: number) => {
       const story = stories[storyIndex];
       if (!story) {
         stopAllAudio();
@@ -188,7 +196,7 @@ export function AudioBriefPlayer({
           if (sessionId !== playbackSessionRef.current) return;
           if (storyIndex + 1 < stories.length) {
             setIndex(storyIndex + 1);
-            void speakStory(storyIndex + 1, playbackRate, voiceUriOverride);
+            void speakStory(storyIndex + 1, playbackRate);
           } else {
             setIsPlaying(false);
           }
@@ -207,12 +215,12 @@ export function AudioBriefPlayer({
         }
       }
 
-      // Mode 2: Enhanced Browser Speech Synthesis with natural voice selection & sentence pacing
+      // Mode 2: Browser Speech Synthesis locked to UK English Female
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
       const chunks = buildBroadcastChunks(story, storyIndex, stories.length);
-      const chosenUri = voiceUriOverride ?? selectedVoiceURI;
-      const chosenVoice = voices.find((v) => v.voiceURI === chosenUri) ?? voices[0];
+      const chosenVoice =
+        ukVoice ?? pickUkEnglishFemaleVoice(window.speechSynthesis.getVoices());
 
       setIsPlaying(true);
 
@@ -223,7 +231,7 @@ export function AudioBriefPlayer({
             pauseTimerRef.current = setTimeout(() => {
               if (sessionId !== playbackSessionRef.current) return;
               setIndex(storyIndex + 1);
-              void speakStory(storyIndex + 1, playbackRate, chosenUri);
+              void speakStory(storyIndex + 1, playbackRate);
             }, 450);
           } else {
             setIsPlaying(false);
@@ -236,7 +244,7 @@ export function AudioBriefPlayer({
           utterance.voice = chosenVoice;
           utterance.lang = chosenVoice.lang;
         } else {
-          utterance.lang = "en-US";
+          utterance.lang = "en-GB";
         }
         utterance.rate = playbackRate;
         utterance.pitch = 1.0;
@@ -259,7 +267,7 @@ export function AudioBriefPlayer({
 
       speakChunk(0);
     },
-    [stories, studioMode, selectedVoiceURI, voices, stopAllAudio]
+    [stories, studioMode, ukVoice, stopAllAudio]
   );
 
   function handleTogglePlay() {
@@ -289,13 +297,6 @@ export function AudioBriefPlayer({
     }
   }
 
-  function handleVoiceChange(uri: string) {
-    setSelectedVoiceURI(uri);
-    if (isPlaying) {
-      void speakStory(index, speed, uri);
-    }
-  }
-
   const current = stories[index];
   if (!current) return null;
 
@@ -322,21 +323,6 @@ export function AudioBriefPlayer({
       </div>
 
       <div className="audio-player-controls">
-        {!studioMode && voices.length > 1 && (
-          <select
-            className="audio-voice-select"
-            value={selectedVoiceURI}
-            onChange={(e) => handleVoiceChange(e.target.value)}
-            aria-label="Choose narrator voice"
-          >
-            {voices.map((v) => (
-              <option key={v.voiceURI} value={v.voiceURI}>
-                {v.name.replace(/Microsoft |Google |Online \(Natural\) /g, "")}
-              </option>
-            ))}
-          </select>
-        )}
-
         {(supported || studioMode) && (
           <>
             <button

@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   const tag = (searchParams.get("tag") || "").slice(0, 32);
   const accent = domainMeta?.accentColor || "#3b82f6";
   const badgeLabel = domainMeta?.label || "FRONT PAGE BRIEFING";
+  const isDownload = searchParams.get("download") === "1";
 
   return new ImageResponse(
     (
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
         {/* Top accent bar */}
         <div
           style={{
+            display: "flex",
             position: "absolute",
             top: 0,
             left: 0,
@@ -66,6 +68,7 @@ export async function GET(request: NextRequest) {
           >
             <div
               style={{
+                display: "flex",
                 width: 14,
                 height: 14,
                 borderRadius: 999,
@@ -88,6 +91,7 @@ export async function GET(request: NextRequest) {
           {tag ? (
             <div
               style={{
+                display: "flex",
                 fontSize: 20,
                 padding: "8px 18px",
                 borderRadius: 999,
@@ -104,6 +108,7 @@ export async function GET(request: NextRequest) {
         {/* Main Headline */}
         <div
           style={{
+            display: "flex",
             fontSize: title.length > 85 ? 48 : 58,
             fontWeight: 700,
             lineHeight: 1.16,
@@ -145,6 +150,7 @@ export async function GET(request: NextRequest) {
 
           <div
             style={{
+              display: "flex",
               fontSize: 20,
               color: "#d1d5db",
               padding: "10px 18px",
@@ -153,7 +159,7 @@ export async function GET(request: NextRequest) {
               border: "1px solid #242934",
             }}
           >
-            Source: {source}
+            {`Source: ${source}`}
           </div>
         </div>
       </div>
@@ -161,6 +167,11 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
+      headers: isDownload
+        ? {
+            "Content-Disposition": 'attachment; filename="frontier-brief-card.png"',
+          }
+        : undefined,
     }
   );
 }

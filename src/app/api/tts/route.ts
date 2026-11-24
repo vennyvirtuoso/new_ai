@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const text = request.nextUrl.searchParams.get("text")?.trim();
-  const voiceParam = request.nextUrl.searchParams.get("voice") || "nova";
+  const voiceParam = request.nextUrl.searchParams.get("voice") || "fable";
 
   const openAiKey = process.env.OPENAI_API_KEY;
   const elevenKey = process.env.ELEVENLABS_API_KEY;
