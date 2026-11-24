@@ -540,6 +540,19 @@ input {
   cursor: pointer;
 }
 
+.audio-voice-select {
+  max-width: 145px;
+  min-block-size: 32px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* Social Share Row inside ArticleDialog */
 .social-share-row {
   display: flex;
