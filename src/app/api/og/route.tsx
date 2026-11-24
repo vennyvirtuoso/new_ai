@@ -12,14 +12,48 @@ export async function GET(request: NextRequest) {
   const domainParam = searchParams.get("domain") as DomainId | null;
   const domainMeta =
     domainParam && DOMAIN_MAP[domainParam] ? DOMAIN_MAP[domainParam] : null;
-  const source = (searchParams.get("source") || "28 Live Research & Tech Feeds").slice(
-    0,
-    50
-  );
+  const source = (
+    searchParams.get("source") || "28 Live Research & Tech Feeds"
+  ).slice(0, 50);
   const tag = (searchParams.get("tag") || "").slice(0, 32);
-  const accent = domainMeta?.accentColor || "#3b82f6";
+  const theme = searchParams.get("theme") === "light" ? "light" : "dark";
+  const isLight = theme === "light";
+
+  const accent = domainMeta?.accentColor || (isLight ? "#1a4ed8" : "#60a5fa");
   const badgeLabel = domainMeta?.label || "FRONT PAGE BRIEFING";
   const isDownload = searchParams.get("download") === "1";
+
+  const palette = isLight
+    ? {
+        bg: "#faf9f6",
+        surface: "#ffffff",
+        pillBg: "#f1efe9",
+        pillBorder: "#dcd6c8",
+        pillText: "#1a4ed8",
+        eyebrowText: "#4a4a45",
+        titleText: "#141413",
+        brandText: "#141413",
+        subText: "#63625c",
+        divider: "#e2ddd2",
+        sourceBg: "#ffffff",
+        sourceBorder: "#dcd6c8",
+        sourceText: "#2c2c28",
+      }
+    : {
+        bg: "#0e1015",
+        surface: "#161922",
+        pillBg: "#1e2330",
+        pillBorder: "#323a4d",
+        pillText: "#8cc0ff",
+        eyebrowText: "#c2c6d0",
+        titleText: "#f5f4f0",
+        brandText: "#f5f4f0",
+        subText: "#9ca3b5",
+        divider: "#282e3d",
+        sourceBg: "#161922",
+        sourceBorder: "#2f3647",
+        sourceText: "#e5e7eb",
+      };
 
   return new ImageResponse(
     (
@@ -30,8 +64,8 @@ export async function GET(request: NextRequest) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#0d0f12",
-          color: "#f3f4f6",
+          background: palette.bg,
+          color: palette.titleText,
           padding: "56px 64px",
           fontFamily: "Georgia, serif",
           position: "relative",
@@ -81,7 +115,7 @@ export async function GET(request: NextRequest) {
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "#d1d5db",
+                color: palette.eyebrowText,
               }}
             >
               {badgeLabel}
@@ -95,9 +129,9 @@ export async function GET(request: NextRequest) {
                 fontSize: 20,
                 padding: "8px 18px",
                 borderRadius: 999,
-                background: "#1b1f27",
-                border: "1px solid #353c4b",
-                color: "#93c5fd",
+                background: palette.pillBg,
+                border: `1px solid ${palette.pillBorder}`,
+                color: palette.pillText,
               }}
             >
               {tag}
@@ -113,7 +147,7 @@ export async function GET(request: NextRequest) {
             fontWeight: 700,
             lineHeight: 1.16,
             letterSpacing: "-0.025em",
-            color: "#ffffff",
+            color: palette.titleText,
             marginTop: 12,
             marginBottom: 12,
           }}
@@ -127,7 +161,7 @@ export async function GET(request: NextRequest) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderTop: "1px solid #242934",
+            borderTop: `1px solid ${palette.divider}`,
             paddingTop: 26,
             fontFamily: "sans-serif",
           }}
@@ -138,12 +172,12 @@ export async function GET(request: NextRequest) {
                 fontSize: 30,
                 fontWeight: 700,
                 fontFamily: "Georgia, serif",
-                color: "#ffffff",
+                color: palette.brandText,
               }}
             >
               Frontier Brief
             </span>
-            <span style={{ fontSize: 19, color: "#9ca3af" }}>
+            <span style={{ fontSize: 19, color: palette.subText }}>
               AI Research · Major Labs · Quantum · Chips &amp; Energy · Startups
             </span>
           </div>
@@ -152,11 +186,11 @@ export async function GET(request: NextRequest) {
             style={{
               display: "flex",
               fontSize: 20,
-              color: "#d1d5db",
+              color: palette.sourceText,
               padding: "10px 18px",
               borderRadius: 10,
-              background: "#14171c",
-              border: "1px solid #242934",
+              background: palette.sourceBg,
+              border: `1px solid ${palette.sourceBorder}`,
             }}
           >
             {`Source: ${source}`}

@@ -30,48 +30,52 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-page: #0d0f12;
-    --bg-surface: #14171c;
-    --bg-elevated: #1b1f27;
-    --bg-hover: #222732;
-    --bg-pill: #1f242e;
+    --bg-page: #0c0e13;
+    --bg-surface: #151821;
+    --bg-elevated: #1d222e;
+    --bg-hover: #252b3b;
+    --bg-pill: #202634;
 
-    --text-primary: #f3f4f6;
-    --text-secondary: #a8b0be;
-    --text-muted: #798294;
+    --text-primary: #f5f4f0;
+    --text-secondary: #c4c9d4;
+    --text-muted: #8c95a6;
 
-    --border-subtle: #242934;
-    --border-strong: #353c4b;
+    --border-subtle: #262c3a;
+    --border-strong: #3a4356;
 
-    --accent-ink: #60a5fa;
-    --accent-soft: #16243d;
+    --accent-ink: #7cb6ff;
+    --accent-soft: rgba(96, 165, 250, 0.14);
     --ok-color: #34d399;
     --warn-color: #fbbf24;
 
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
-    --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.65);
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 6px 20px rgba(0, 0, 0, 0.28);
+    --shadow-dialog: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 28px 72px rgba(0, 0, 0, 0.72);
   }
 }
 
 /* Explicit theme override from <meta name="color-scheme"> (works on desktop & iOS Safari) */
 :root:has(> head > meta[name="color-scheme"][content="dark"]) {
   color-scheme: dark;
-  --bg-page: #0d0f12;
-  --bg-surface: #14171c;
-  --bg-elevated: #1b1f27;
-  --bg-hover: #222732;
-  --bg-pill: #1f242e;
-  --text-primary: #f3f4f6;
-  --text-secondary: #a8b0be;
-  --text-muted: #798294;
-  --border-subtle: #242934;
-  --border-strong: #353c4b;
-  --accent-ink: #60a5fa;
-  --accent-soft: #16243d;
+  --bg-page: #0c0e13;
+  --bg-surface: #151821;
+  --bg-elevated: #1d222e;
+  --bg-hover: #252b3b;
+  --bg-pill: #202634;
+  --text-primary: #f5f4f0;
+  --text-secondary: #c4c9d4;
+  --text-muted: #8c95a6;
+  --border-subtle: #262c3a;
+  --border-strong: #3a4356;
+  --accent-ink: #7cb6ff;
+  --accent-soft: rgba(96, 165, 250, 0.14);
   --ok-color: #34d399;
   --warn-color: #fbbf24;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 6px 20px rgba(0, 0, 0, 0.28);
+  --shadow-dialog: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 28px 72px rgba(0, 0, 0, 0.72);
 }
 
 :root:has(> head > meta[name="color-scheme"][content="light"]) {

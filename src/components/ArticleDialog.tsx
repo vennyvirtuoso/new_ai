@@ -28,8 +28,21 @@ export function ArticleDialog({
   onClose,
 }: ArticleDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const downloadingRef = useRef(false);
   const [copied, setCopied] = useState(false);
   const [downloadingCard, setDownloadingCard] = useState(false);
+
+  function getActiveTheme(): "light" | "dark" {
+    if (typeof document === "undefined") return "light";
+    const meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="color-scheme"]'
+    );
+    if (meta?.content === "dark") return "dark";
+    if (meta?.content === "light") return "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -112,16 +125,27 @@ export function ArticleDialog({
     : "";
 
   async function handleDownloadCard() {
-    if (!article || !ogCardUrl || downloadingCard) return;
+    if (!article || !ogCardUrl || downloadingRef.current) return;
+    downloadingRef.current = true;
     setDownloadingCard(true);
     try {
-      const res = await fetch(`${ogCardUrl}&download=1`);
+      const theme = getActiveTheme();
+      const themedUrl = `${ogCardUrl}&theme=${theme}`;
+      const res = await fetch(themedUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const filename = `frontier-brief-${article.id}.png`;
 
-      // On iPhone/Android, offer native Share Sheet with the PNG file so users can Save Image directly
-      if (typeof File !== "undefined" && typeof navigator !== "undefined") {
+      // On touch devices (iPhone/Android), use native Share Sheet so users can Save Image to Photos
+      const isTouchDevice =
+        typeof window !== "undefined" &&
+        window.matchMedia("(pointer: coarse)").matches;
+
+      if (
+        isTouchDevice &&
+        typeof File !== "undefined" &&
+        typeof navigator !== "undefined"
+      ) {
         const file = new File([blob], filename, { type: "image/png" });
         if (
           typeof navigator.canShare === "function" &&
@@ -139,7 +163,7 @@ export function ArticleDialog({
         }
       }
 
-      // Desktop & fallback: reliable Blob download
+      // Single clean Blob download (no Content-Disposition header on fetch to prevent duplicate saves)
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
@@ -148,10 +172,8 @@ export function ArticleDialog({
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-    } catch {
-      // Fallback: open directly
-      window.open(`${ogCardUrl}&download=1`, "_blank", "noopener,noreferrer");
     } finally {
+      downloadingRef.current = false;
       setDownloadingCard(false);
     }
   }
