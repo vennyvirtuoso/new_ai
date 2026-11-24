@@ -62,6 +62,7 @@ export function SourcesDialog({
       onClose={onClose}
       {...({ closedby: "any" } as Record<string, string>)}
     >
+      <div className="sheet-grabber" aria-hidden="true" />
       <div className="dialog-header">
         <div>
           <div className="source-badge">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Bookmark,
@@ -10,6 +10,7 @@ import {
   Radio,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   Sparkles,
   X,
 } from "lucide-react";
@@ -43,6 +44,14 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [activeArticle, setActiveArticle] = useState<NewsArticle | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const activeFiltersCount =
+    (selectedTag ? 1 : 0) +
+    (selectedSource ? 1 : 0) +
+    (timeRange !== "all" ? 1 : 0) +
+    (viewMode !== "editorial" ? 1 : 0);
 
   useEffect(() => {
     try {
@@ -221,7 +230,7 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
             <div className="masthead-actions">
               <button
                 type="button"
-                className="icon-btn"
+                className="icon-btn desktop-only-btn"
                 onClick={() => setSourcesOpen(true)}
               >
                 <Radio size={15} />
@@ -231,7 +240,7 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
 
               <button
                 type="button"
-                className="icon-btn"
+                className="icon-btn desktop-only-btn"
                 data-active={activeTab === "saved"}
                 onClick={() =>
                   handleSelectTab(activeTab === "saved" ? "all" : "saved")
@@ -247,10 +256,13 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
                 className="icon-btn"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
+                aria-label="Refresh live feeds"
                 title="Refresh live feeds"
               >
                 <RefreshCw size={15} className={isRefreshing ? "spin" : ""} />
-                {isRefreshing ? "Updating" : "Refresh"}
+                <span className="btn-label-desktop">
+                  {isRefreshing ? "Updating" : "Refresh"}
+                </span>
               </button>
 
               <ThemeToggle />
@@ -300,29 +312,49 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
       <section className="container">
         <div className="toolbar">
           <div className="toolbar-row">
-            <div className="search-box">
-              <Search size={15} className="search-icon" />
-              <input
-                type="search"
-                className="search-input"
-                placeholder="Search papers, labs, quantum, chips, startups..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search articles"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className="search-clear"
-                  onClick={() => setSearchQuery("")}
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
+            <div className="search-row">
+              <div className="search-box">
+                <Search size={15} className="search-icon" />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  className="search-input"
+                  placeholder="Search AI, quantum, chips, startups..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search articles"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="search-clear"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="mobile-filter-toggle"
+                data-active={mobileFiltersOpen || activeFiltersCount > 0}
+                aria-expanded={mobileFiltersOpen}
+                onClick={() => setMobileFiltersOpen((v) => !v)}
+              >
+                <SlidersHorizontal size={15} />
+                <span>Filters</span>
+                {activeFiltersCount > 0 && (
+                  <span className="badge-count">{activeFiltersCount}</span>
+                )}
+              </button>
             </div>
 
-            <div className="toolbar-controls">
+            <div
+              className="toolbar-controls mobile-collapsible"
+              data-open={mobileFiltersOpen}
+            >
               <div className="segmented" role="group" aria-label="Time range">
                 {(["24h", "7d", "30d", "all"] as TimeRange[]).map((range) => (
                   <button
@@ -362,7 +394,12 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
 
           {/* Topic Sub-tags */}
           {availableTags.length > 0 && (
-            <div className="tag-strip" role="group" aria-label="Filter by topic">
+            <div
+              className="tag-strip mobile-collapsible"
+              data-open={mobileFiltersOpen}
+              role="group"
+              aria-label="Filter by topic"
+            >
               <button
                 type="button"
                 className="tag-chip"
@@ -757,6 +794,58 @@ export function NewsDashboard({ initialData }: NewsDashboardProps) {
         sourceHealth={data.sourceHealth}
         onClose={() => setSourcesOpen(false)}
       />
+
+      {/* Native-style iPhone / Android Bottom Tab Bar */}
+      <nav className="mobile-bottom-bar" aria-label="Mobile quick navigation">
+        <button
+          type="button"
+          className="mobile-tab-btn"
+          data-active={activeTab === "all"}
+          onClick={() => handleSelectTab("all")}
+        >
+          <Sparkles size={19} />
+          <span>Briefing</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-tab-btn"
+          data-active={viewMode === "wire" && activeTab !== "saved"}
+          onClick={() => {
+            setViewMode((prev) => (prev === "wire" ? "editorial" : "wire"));
+            if (activeTab === "saved") setActiveTab("all");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <List size={19} />
+          <span>{viewMode === "wire" ? "Editorial" : "Wire"}</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-tab-btn"
+          data-active={activeTab === "saved"}
+          onClick={() =>
+            handleSelectTab(activeTab === "saved" ? "all" : "saved")
+          }
+        >
+          <Bookmark size={19} />
+          <span>Saved</span>
+          {savedIds.length > 0 && (
+            <span className="mobile-tab-badge">{savedIds.length}</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className="mobile-tab-btn"
+          data-active={sourcesOpen}
+          onClick={() => setSourcesOpen(true)}
+        >
+          <Radio size={19} />
+          <span>Sources</span>
+        </button>
+      </nav>
     </>
   );
 }

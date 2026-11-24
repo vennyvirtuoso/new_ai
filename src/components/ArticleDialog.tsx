@@ -101,6 +101,7 @@ export function ArticleDialog({
     >
       {article && domain && (
         <>
+          <div className="sheet-grabber" aria-hidden="true" />
           <div className="dialog-header">
             <div>
               <div className="source-badge">
