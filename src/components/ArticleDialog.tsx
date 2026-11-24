@@ -66,8 +66,20 @@ export function ArticleDialog({
     return () => dialog.removeEventListener("click", handleBackdropClick);
   }, []);
 
-  async function handleCopyLink() {
+  async function handleShareOrCopy() {
     if (!article) return;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: article.title,
+          text: `${article.title} — ${article.sourceName}`,
+          url: article.url,
+        });
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(article.url);
       setCopied(true);
@@ -171,10 +183,10 @@ export function ArticleDialog({
                 <button
                   type="button"
                   className="icon-btn"
-                  onClick={handleCopyLink}
+                  onClick={handleShareOrCopy}
                 >
                   {copied ? <Check size={15} /> : <Share2 size={15} />}
-                  {copied ? "Copied" : "Copy link"}
+                  {copied ? "Copied" : "Share"}
                 </button>
               </div>
 

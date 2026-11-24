@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 
@@ -20,10 +20,28 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0f12" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: "Frontier Brief — Worldwide AI Research & Deep-Tech Intelligence",
   description:
     "Curated real-time worldwide news for AI/ML researchers: frontier papers, major AI labs, quantum computing, semiconductors, energy, biotech, robotics, policy, and entrepreneurship.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Frontier Brief",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 const FOUC_SCRIPT = `try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark"){document.querySelector('meta[name="color-scheme"]').content=s;}}catch(e){}`;

@@ -38,6 +38,13 @@
     0 24px 64px rgba(15, 23, 42, 0.18),
     0 24px 64px rgba(0, 0, 0, 0.65)
   );
+  --target-size: 24px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --target-size: 44px;
+  }
 }
 
 *,
@@ -49,6 +56,8 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: calc(4.25rem + env(safe-area-inset-top, 0px));
 }
 
 body {
@@ -57,17 +66,46 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   line-height: 1.55;
+  overflow-wrap: break-word;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+img,
+video {
+  max-inline-size: 100%;
+  block-size: auto;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+  touch-action: manipulation;
+}
+
+:where(a, code) {
+  overflow-wrap: anywhere;
 }
 
 button,
 input {
   font: inherit;
   color: inherit;
+  touch-action: manipulation;
+}
+
+:where(button, input:not([type="checkbox"], [type="radio"]), [role="button"], nav a) {
+  min-block-size: var(--target-size);
+  min-inline-size: var(--target-size);
 }
 
 /* Visually hidden helper */
@@ -107,18 +145,20 @@ input {
   display: none;
 }
 
-/* Layout container */
+/* Layout container with iOS/Android safe-area support */
 .container {
   width: 100%;
   max-width: 1320px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding-inline-start: max(24px, env(safe-area-inset-left, 0px));
+  padding-inline-end: max(24px, env(safe-area-inset-right, 0px));
 }
 
 /* Top Masthead */
 .masthead {
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .masthead-top {
@@ -181,9 +221,10 @@ input {
 .icon-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 12px;
+  min-block-size: max(36px, var(--target-size));
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
@@ -233,8 +274,10 @@ input {
 .domain-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding: 8px 0;
 }
@@ -309,7 +352,8 @@ input {
 
 .search-box {
   position: relative;
-  flex: 1 1 300px;
+  flex: 1 1 260px;
+  min-inline-size: 0;
   max-width: 480px;
 }
 
@@ -324,12 +368,12 @@ input {
 
 .search-input {
   width: 100%;
-  height: 38px;
-  padding: 0 36px 0 38px;
+  min-block-size: max(38px, var(--target-size));
+  padding: 6px 38px 6px 38px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   outline: none;
   transition: border-color 0.15s ease;
 }
@@ -564,10 +608,10 @@ input {
   text-decoration: underline;
 }
 
-/* Article Grid */
+/* Article Grid (intrinsic sizing safe down to 320px viewports) */
 .article-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 16px;
 }
 
@@ -575,6 +619,7 @@ input {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-inline-size: 0;
   padding: 18px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
@@ -584,9 +629,19 @@ input {
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
-.article-card:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .article-card:hover,
+  .hero-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+  }
+}
+
+.article-card:active,
+.hero-card:active,
+.highlight-card:active,
+.wire-row:active {
+  opacity: 0.88;
 }
 
 .card-meta-top {
@@ -907,10 +962,10 @@ dialog.editorial-dialog::backdrop {
   color: var(--warn-color);
 }
 
-/* Footer */
+/* Footer with bottom safe-area inset for iPhone/Android gesture bars */
 .site-footer {
   border-top: 1px solid var(--border-subtle);
-  padding: 28px 0 40px;
+  padding: 28px 0 max(40px, calc(24px + env(safe-area-inset-bottom, 0px)));
   color: var(--text-muted);
   font-size: 0.82rem;
 }
@@ -937,6 +992,20 @@ dialog.editorial-dialog::backdrop {
   animation: spin 0.9s linear infinite;
 }
 
+/* Touch device ergonomic enhancements (iPhone & Android) */
+@media (pointer: coarse) {
+  .search-input {
+    font-size: 16px; /* Prevents iOS Safari auto-zoom on input focus */
+  }
+  .micro-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .card-actions {
+    gap: 2px;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 900px) {
   .lead-grid {
@@ -946,13 +1015,68 @@ dialog.editorial-dialog::backdrop {
 
 @media (max-width: 640px) {
   .container {
-    padding: 0 16px;
+    padding-inline-start: max(16px, env(safe-area-inset-left, 0px));
+    padding-inline-end: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .masthead-top {
+    padding: 14px 0 12px;
+    gap: 12px;
+  }
+  .masthead-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .brand-subtitle {
+    font-size: 0.82rem;
+  }
+  .search-box {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .search-input {
+    font-size: 16px; /* Prevents iOS Safari zoom on focus */
+  }
+  .toolbar-controls {
+    width: 100%;
+    justify-content: space-between;
   }
   .wire-row {
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 6px;
+    padding: 14px;
   }
   .hero-card {
     padding: 20px;
+  }
+  .article-card {
+    padding: 16px;
+  }
+  .sources-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* Native bottom-sheet presentation for modals on phones */
+  dialog.editorial-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 88dvh;
+    margin: auto 0 0 0;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+  }
+  .dialog-header {
+    padding: 16px 18px 12px;
+  }
+  .dialog-body {
+    padding: 16px 18px max(24px, calc(16px + env(safe-area-inset-bottom, 0px)));
+  }
+  .dialog-title {
+    font-size: 1.25rem;
+  }
+  .primary-link-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
