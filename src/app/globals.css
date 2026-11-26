@@ -606,8 +606,21 @@ input {
   color: var(--text-secondary);
 }
 
+.footer-credit-name,
+.footer-credit-link {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.footer-credit-link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border-strong);
+}
+
 @media (hover: hover) {
-  .footer-domain-link:hover {
+  .footer-domain-link:hover,
+  .footer-credit-link:hover {
     color: var(--accent-ink);
     text-decoration: underline;
   }

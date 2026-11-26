@@ -37,6 +37,8 @@ const SAVED_STORAGE_KEY = "frontier-brief:saved-articles";
 const STACK_STORAGE_KEY = "frontier-brief:my-stack";
 const ENGAGEMENT_STORAGE_KEY = "frontier-brief:engagement";
 const ALL_DOMAIN_IDS = DOMAINS.map((d) => d.id);
+const AUTHOR_NAME = "Vijendra Vaishya";
+const AUTHOR_URL = process.env.NEXT_PUBLIC_AUTHOR_URL || "";
 
 interface EngagementState {
   streakDays: number;
@@ -1153,8 +1155,32 @@ export function NewsDashboard({
           </div>
           <div className="footer-inner">
             <span>
-              Frontier Brief · Live RSS/Atom aggregator for AI/ML researchers ·
-              Powered by Vercel Edge
+              Frontier Brief · Curated by{" "}
+              {AUTHOR_URL ? (
+                <a
+                  href={AUTHOR_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-credit-link"
+                >
+                  {AUTHOR_NAME}
+                </a>
+              ) : (
+                <span className="footer-credit-name">{AUTHOR_NAME}</span>
+              )}
+              {AUTHOR_URL && (
+                <>
+                  {" · "}
+                  <a
+                    href={AUTHOR_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer-credit-link"
+                  >
+                    Suggest a feed
+                  </a>
+                </>
+              )}
             </span>
             <span>
               Last synced: {formatRelativeTime(data.fetchedAt)} · All headlines
